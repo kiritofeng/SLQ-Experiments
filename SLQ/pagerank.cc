@@ -57,7 +57,7 @@ round_to_cluster(const Graph<double> &G, std::vector<double> x) {
     int i; double v;
     std::tie(i, v) = a;
     if (v > 0) {
-      nnz_dict[i] = v;
+      nnz_dict[i+1] = v;
     }
   }
   std::unordered_set<size_t> bestset;

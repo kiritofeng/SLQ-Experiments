@@ -1,5 +1,6 @@
 #ifndef CIRCULARDEQUE_H
 #define CIRCULARDEQUE_H
+#include <cassert>
 #include <cstddef>
 #include <utility>
 
@@ -42,6 +43,7 @@ public:
   size_t length() const { return isFull ? n : (r >= l ? r - l : r + n - l); }
 
   void push(const T &t) {
+    assert(!isFull);
     arr[r] = t;
     r = (r == n - 1 ? 0 : r + 1);
     if (l == r) {
@@ -50,6 +52,7 @@ public:
   }
 
   void push(T &&t) {
+    assert(!isFull);
     arr[r] = t;
     r = (r == n - 1 ? 0 : r + 1);
     if (l == r) {
@@ -66,6 +69,7 @@ public:
   }
 
   void pushfirst(const T &t) {
+    assert(!isFull);
     l = (l == 0 ? n - 1 : l - 1);
     if (l == r) {
       isFull = 1;
@@ -74,6 +78,7 @@ public:
   }
 
   void pushfirst(T &&t) {
+    assert(!isFull);
     l = (l == 0 ? n - 1 : l - 1);
     if (l == r) {
       isFull = 1;

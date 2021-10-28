@@ -10,28 +10,27 @@ class Graph {
   std::vector<std::vector<std::pair<size_t, W>>> adj;
 
 public:
-  Graph(size_t n=0) : n{n}, adj{n} {}
+  Graph(size_t n=0) : n{n}, adj(n) {}
 
-  Graph(const Graph<W> &G): n{G.n}, adj{G.adj} {}
+  //Graph(const Graph<W> &G): n{G.n}, adj{G.adj} {}
 
-  Graph(Graph<W> &&G): n{G.n}, adj{std::move(G.adj)} {}
+  //Graph(Graph<W> &&G): n{G.n}, adj{std::move(G.adj)} {}
 
-  Graph &operator=(const Graph<W> &G) {
-    n = G.n;
-    adj = G.adj;
-    return *this;
-  }
-  Graph &operator=(Graph<W> &&G) {
-    n = G.n;
-    adj = std::move(G.adj);
-    return *this;
-  }
+  //Graph &operator=(const Graph<W> &G) {
+  //  n = G.n;
+  //  adj = G.adj;
+  //  return *this;
+  //}
+  //Graph &operator=(Graph<W> &&G) {
+  //  n = G.n;
+  //  adj = std::move(G.adj);
+  //  return *this;
+  //}
 
   size_t size() const { return n; }
 
   void add_edge(size_t u, size_t v, const W &w) {
     adj[u-1].emplace_back(v, w);
-    adj[v-1].emplace_back(u, w);
   }
 
   const std::vector<size_t> deg() const {

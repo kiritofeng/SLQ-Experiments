@@ -2,6 +2,7 @@
 #define SLQ_H
 #include <memory>
 #include <tuple>
+#include <queue>
 #include <unordered_set>
 
 #include "circulardeque.h"
@@ -44,7 +45,8 @@ double dxi_solver(const Graph<double> &G, const std::vector<double> &x, double k
 void residual_update(const Graph<double> &G, const std::vector<double> &x,
     double dxi, int i, const std::unordered_set<int> &seedset,
     std::vector<double> &r, double gamma,
-    CircularDeque<int> &Q, double kappa, std::shared_ptr<EdgeLoss> L);
+    // CircularDeque<int> &Q, double kappa, std::shared_ptr<EdgeLoss> L);
+    std::deque<int> &Q, double kappa, std::shared_ptr<EdgeLoss> L);
 
 /**
  * L is either TwoNormLoss or QHuberLoss, where we have

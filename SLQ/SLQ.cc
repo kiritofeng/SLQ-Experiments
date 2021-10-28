@@ -9,7 +9,7 @@
 
 QHuberLoss::QHuberLoss(double q, double delta) : EdgeLoss{}, q{q}, delta{delta} {}
 
-double QHuberLoss::operator()(double d) const { return pow(d, 1 / (q - 1)); }
+double QHuberLoss::operator()(double d) const { return pow(d, 1.0 / (q - 1)); }
 
 double sign(double d) {
   if (d == 0) {
@@ -93,7 +93,6 @@ double dxi_solver(const Graph<double> &G, const std::vector<double> &x,
     std::shared_ptr<EdgeLoss> L, std::vector<double> &buf_x,
     std::vector<double> &buf_vals, double thd1, double thd2) {
 
-  std::cout << "dxi_solver " << i << std::endl;
   int di = G.deg(i);
   bool found_dxi = false;
   int nneighs = _buffer_neighbours(x, G, i, buf_x, buf_vals);
@@ -101,7 +100,7 @@ double dxi_solver(const Graph<double> &G, const std::vector<double> &x,
   int nbisect = 0;
 
   double ri_new = r[i - 1];
-  double dx_min = 0;
+  long double dx_min = 0;
   double thd_min = std::min(thd1, thd2);
   double thd_max = std::max(thd1, thd2);
   double thd = thd_max;
@@ -117,14 +116,16 @@ double dxi_solver(const Graph<double> &G, const std::vector<double> &x,
 
   int ratio = 10;
   while (ri_new > rho * kappa * di) {
-    std::cout << "ri_new = " << ri_new << std::endl;
     dx = thd;
     ri_new = _eval_residual_i(x[i - 1], di, dx, seedset.count(i) > 0,
         nneighs, buf_x, buf_vals, L, gamma);
 
+    /*
     if (nbisect >= 40) {
-      std::cout << i << " " << dx << " " << di << " " << ri_new << " " << rho * kappa * di << std::endl;
+      std::cout << i << " " << dx << " " << di << " " << ri_new << " "
+                << rho * kappa * di << std::endl;
     }
+    */
 
     last_dx = dx_min;
     dx_min = thd;
@@ -132,12 +133,11 @@ double dxi_solver(const Graph<double> &G, const std::vector<double> &x,
     nbisect += 1;
   }
   dx_min = last_dx;
-  double dx_max = thd/ratio;
+  long double dx_max = thd/ratio;
 
-  double dx_mid = 0;
+  long double dx_mid = 0;
   while ((found_dxi == false && dx_max - dx_min > epsilon) || ri_new < 0) {
-    std::cout << "searching [" << dx_min << ", " << dx_max << "], ri_new = " << ri_new << std::endl;
-    double dx_mid = dx_max / 2 + dx_min / 2;
+    double dx_mid = dx_max / 2.0 + dx_min / 2.0;
     ri_new = _eval_residual_i(x[i - 1], di, dx_mid, seedset.count(i) > 0,
         nneighs, buf_x, buf_vals, L, gamma);
 
@@ -155,7 +155,8 @@ double dxi_solver(const Graph<double> &G, const std::vector<double> &x,
 void residual_update(const Graph<double> &G, const std::vector<double> &x,
     double dxi, int i, const std::unordered_set<int> &seedset,
     std::vector<double> &r, double gamma,
-    CircularDeque<int> &Q, double kappa, std::shared_ptr<EdgeLoss> L) {
+    // CircularDeque<int> &Q, double kappa, std::shared_ptr<EdgeLoss> L) {
+    std::deque<int> &Q, double kappa, std::shared_ptr<EdgeLoss> L) {
 
   r[i - 1] = 0;
   for (const auto &a : G.neighbours(i)) {
@@ -167,7 +168,8 @@ void residual_update(const Graph<double> &G, const std::vector<double> &x,
     r[j - 1] += drij;
     r[i - 1] += a.second * dri / gamma;
     if (rj_old <= kappa * G.deg(j) && r[j - 1] > kappa * G.deg(j)) {
-      Q.push(j);
+      // Q.push(j);
+      Q.push_back(j);
     }
   }
 
@@ -177,7 +179,8 @@ void residual_update(const Graph<double> &G, const std::vector<double> &x,
     r[i - 1] -= G.deg(i) * L->loss_gradient(x[i - 1] + dxi);
   }
   if (r[i - 1] > kappa * G.deg(i)) {
-    Q.push(i);
+    // Q.push(i);
+    Q.push_back(i);
   }
 }
 
@@ -189,14 +192,16 @@ slq_diffusion(const Graph<double> &G, const std::vector<size_t> &S, double gamma
   int n = G.size();
   std::vector<double> x(n, 0), r(n, 0);
 
-  int max_deg = _max_nz_degree(G);
+  // int max_deg = _max_nz_degree(G);
 
-  std::vector<double> buf_x(max_deg, 0), buf_vals(max_deg, 0);
-  CircularDeque<int> Q(n);
+  std::vector<double> buf_x(n, 0), buf_vals(n, 0);
+  // CircularDeque<int> Q(n);
+  std::deque<int> Q;
 
   for (size_t i : S) {
     r[i - 1] = G.deg(i);
-    Q.push(i);
+    // Q.push(i);
+    Q.push_back(i);
   }
   std::unordered_set<int> seedset(S.begin(), S.end());
 
@@ -213,8 +218,10 @@ slq_diffusion(const Graph<double> &G, const std::vector<size_t> &S, double gamma
   double thd1 = (*L)(1.0 * Svol / Gvol);
   double thd2 = thd1;
 
-  while (Q.length() > 0 && iter < max_iters) {
-    int i = Q.popfirst();
+  // while (Q.length() > 0 && iter < max_iters) {
+  while (Q.size() > 0 && iter < max_iters) {
+    int i = Q.front();
+    Q.pop_front();
     double dxi = dxi_solver(G, x, kappa, epsilon, gamma, r, seedset, rho, i, L,
         buf_x, buf_vals, thd1, thd2);
     thd2 = dxi;
@@ -222,10 +229,10 @@ slq_diffusion(const Graph<double> &G, const std::vector<size_t> &S, double gamma
     x[i - 1] += dxi;
 
     iter += 1;
-    std::cout << "finished iteration " << iter <<std::endl;
   }
 
-  if (iter == max_iters && Q.length() > 0) {
+  // if (iter == max_iters && Q.length() > 0) {
+  if (iter == max_iters && Q.size() > 0) {
     std::cerr << "reached maximum iterations" << std::endl;
   }
 

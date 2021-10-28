@@ -1,6 +1,6 @@
 #ifndef UTIL_H
 #define UTIL_H
-#include <cstddef>
+#include <algorithm>
 #include <iostream>
 #include <iterator>
 #include <tuple>
@@ -138,19 +138,35 @@ size_t _component_dfs(size_t u, const Graph<W> &G, std::vector<bool> &vis) {
 }
 
 template<typename W>
-void _component_dfs(size_t u, const Graph<W> &G, Graph<W> &cc, std::vector<bool> &vis) {
+size_t _component_dfs(size_t u, const Graph<W> &G, std::vector<size_t> &p,
+    std::vector<bool> &vis) {
+  p.push_back(u);
+  size_t ret = 1;
   vis[u - 1] = 1;
   for (const auto &a : G.neighbours(u)) {
     if (!vis[a.first - 1]) {
-      cc.add_edge(u, a.first, a.second);
-      _component_dfs(a.first, G, cc, vis);
+      ret += _component_dfs(a.first, G, p, vis);
+    }
+  }
+  return ret;
+}
+
+template<typename W>
+void _build_new_graph(size_t u, const Graph<W> &G, Graph<W> &cc,
+    const std::vector<size_t> &p, std::vector<bool> &vis) {
+  vis[u - 1] = 1;
+  size_t _u = (std::lower_bound(p.begin(), p.end(), u) - p.begin()) + 1;
+  for (const auto &a : G.neighbours(u)) {
+    size_t _v = (std::lower_bound(p.begin(), p.end(), a.first) - p.begin()) + 1;
+    cc.add_edge(_u, _v, a.second);
+    if (!vis[a.first - 1]) {
+      _build_new_graph(a.first, G, cc, p, vis);
     }
   }
 }
 
 template<typename W>
-std::tuple<Graph<W>, std::vector<bool>> largest_component(const Graph<W> &G) {
-  Graph<W> cc{G.size()};
+std::tuple<Graph<W>, std::vector<size_t>> largest_component(const Graph<W> &G) {
   std::vector<bool> vis(G.size());
   size_t max_ind = 1, max_sz = 0;
   for (size_t u = 1; u <= G.size(); ++u) {
@@ -165,7 +181,14 @@ std::tuple<Graph<W>, std::vector<bool>> largest_component(const Graph<W> &G) {
   for (size_t u = 0; u < G.size(); ++u) {
     vis[u] = 0;
   }
-  _component_dfs(max_ind, G, cc, vis);
-  return std::make_tuple(std::move(cc), std::move(vis));
+  std::vector<size_t> p;
+  _component_dfs(max_ind, G, p, vis);
+  std::sort(p.begin(), p.end());
+  Graph<W> cc{p.size()};
+  for (size_t u = 0; u < G.size(); ++u) {
+    vis[u] = 0;
+  }
+  _build_new_graph(max_ind, G, cc, p, vis);
+  return std::make_tuple(std::move(cc), std::move(p));
 }
 #endif // UTIL_H

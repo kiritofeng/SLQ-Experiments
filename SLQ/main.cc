@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <random>
 #include <tuple>
@@ -10,7 +11,7 @@
 #include "SLQ.h"
 #include "util.h"
 
-const int NTRIALS = 10;
+const int NTRIALS = 50;
 const int LABEL = 2008;
 const double DELTA = 0.0;
 
@@ -25,9 +26,10 @@ int main(int argc, char **argv) {
     int u, v;
     graph_in >> u >> v;
     G.add_edge(u, v, 1.0);
+    G.add_edge(v, u, 1.0);
   }
   Graph<double> GCC;
-  std::vector<bool> p;
+  std::vector<size_t> p;
   std::tie(GCC, p) = largest_component(G);
 
   std::vector<std::tuple<double, double, double, double, double, double, double>> labels{n};
@@ -38,16 +40,18 @@ int main(int argc, char **argv) {
               >> std::get<6>(labels[i]);
   }
   std::vector<size_t> truth;
-  for (int i = 0; i < n; ++i) {
-    if (p[i] && std::get<5>(labels[i]) == LABEL) {
-      truth.push_back(i + 1);
+  for (const auto &a : enumerate(p)) {
+    if (std::get<5>(labels[a.second - 1]) == LABEL) {
+      truth.push_back(a.first + 1);
     }
   }
   std::mt19937 gen;
   for (int seed = 0; seed < NTRIALS; ++seed) {
     gen.seed(seed);
     std::shuffle(truth.begin(), truth.end(), gen);
-    std::vector<size_t> S(truth.begin(), truth.begin() + std::max(1, (int)round(0.01 * truth.size())));
+
+    std::vector<size_t> S(truth.begin(), truth.begin() + std::max(1, (int)(0.01 * truth.size())));
+
     std::shared_ptr<QHuberLoss> L = std::make_shared<QHuberLoss>(1.2, DELTA);
 
     std::vector<double> x_slq, r;
@@ -63,7 +67,8 @@ int main(int argc, char **argv) {
     if (!(iter < 100000)) {
       cond_slq = 1.0;
     }
-    std::cout << seed << " " << cond_slq << " " << pr_slq << " " << rc_slq;
-    std::cout << " " << 2*pr_slq*rc_slq/(pr_slq+rc_slq) << std::endl;
+    std::cout << std::setprecision(12) << seed << " " << cond_slq << " "
+              << pr_slq << " " << rc_slq << " "
+              << 2*pr_slq*rc_slq/(pr_slq+rc_slq) << std::endl;
   }
 }
